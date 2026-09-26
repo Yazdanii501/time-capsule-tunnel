@@ -4,5 +4,302 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Time Capsule Tunnel</title>
-  <!-- truncated for safety - will use full in next call -->
-</head><body>placeholder</body></html>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+  <style>
+    :root {
+      --bg: #030304;
+      --text: #f2eee6;
+      --muted: #8a847a;
+      --gold: #c9a66b;
+      --gold-dim: rgba(201, 166, 107, 0.35);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-weight: 300; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+    #atmosphere { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .progress { position: fixed; top: 0; left: 0; right: 0; height: 1px; z-index: 200; background: rgba(255,255,255,0.03); }
+    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #c9a66b, #e8d5a3); box-shadow: 0 0 12px rgba(201,166,107,0.45); }
+    .era-nav { position: fixed; left: 32px; top: 50%; transform: translateY(-50%); z-index: 100; display: none; flex-direction: column; gap: 28px; }
+    @media (min-width: 960px) { .era-nav { display: flex; } }
+    .era-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.12); border: none; cursor: pointer; position: relative; transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+    .era-dot.active { background: var(--gold); transform: scale(1.7); box-shadow: 0 0 14px var(--gold-dim); }
+    .era-dot.unlocked:not(.active) { background: rgba(201,166,107,0.5); }
+    .era-dot span { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); white-space: nowrap; opacity: 0; transition: opacity 0.35s; pointer-events: none; }
+    .era-dot:hover span, .era-dot.active span { opacity: 1; color: var(--gold); }
+    .tunnel { position: relative; z-index: 2; }
+    .entrance { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem; position: relative; }
+    .entrance::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 80% 50% at 50% 40%, rgba(201,166,107,0.06) 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 50% 80%, rgba(30,25,40,0.4) 0%, transparent 70%); pointer-events: none; }
+    .entrance-label { font-size: 0.7rem; letter-spacing: 0.35em; text-transform: uppercase; color: var(--gold); margin-bottom: 1.8rem; opacity: 0; transform: translateY(12px); }
+    .entrance h1 { font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: clamp(3.2rem, 9vw, 6.5rem); line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 1.5rem; opacity: 0; transform: translateY(18px); }
+    .entrance p { font-size: 1.05rem; color: var(--muted); max-width: 420px; line-height: 1.7; margin-bottom: 3.5rem; opacity: 0; transform: translateY(14px); }
+    .scroll-hint { display: flex; flex-direction: column; align-items: center; gap: 12px; opacity: 0; color: var(--muted); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; }
+    .scroll-hint .line { width: 1px; height: 48px; background: linear-gradient(to bottom, var(--gold), transparent); animation: pulse-line 2.4s ease-in-out infinite; }
+    @keyframes pulse-line { 0%, 100% { opacity: 0.3; transform: scaleY(0.7); } 50% { opacity: 1; transform: scaleY(1); } }
+    .era { min-height: 120vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8rem 1.5rem; position: relative; text-align: center; }
+    .era::before { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s ease; pointer-events: none; }
+    .era.active::before { opacity: 1; }
+    .era-egypt::before { background: radial-gradient(ellipse 70% 50% at 50% 40%, rgba(180, 120, 40, 0.08) 0%, transparent 65%), radial-gradient(ellipse 50% 30% at 50% 90%, rgba(40, 25, 10, 0.35) 0%, transparent 70%); }
+    .era-renaissance::before { background: radial-gradient(ellipse 70% 50% at 50% 40%, rgba(140, 90, 160, 0.07) 0%, transparent 65%), radial-gradient(ellipse 50% 30% at 50% 90%, rgba(30, 20, 40, 0.35) 0%, transparent 70%); }
+    .era-industrial::before { background: radial-gradient(ellipse 70% 50% at 50% 40%, rgba(80, 100, 130, 0.08) 0%, transparent 65%), radial-gradient(ellipse 50% 30% at 50% 90%, rgba(15, 20, 30, 0.4) 0%, transparent 70%); }
+    .era-horizon::before { background: radial-gradient(ellipse 70% 50% at 50% 40%, rgba(60, 140, 160, 0.07) 0%, transparent 65%), radial-gradient(ellipse 50% 30% at 50% 90%, rgba(10, 25, 35, 0.4) 0%, transparent 70%); }
+    .era-content { position: relative; z-index: 2; max-width: 720px; width: 100%; }
+    .era-number { font-size: 0.68rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--gold); margin-bottom: 1.4rem; opacity: 0.85; }
+    .era-title { font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: clamp(2.6rem, 6.5vw, 4.4rem); line-height: 1.1; margin-bottom: 1.3rem; }
+    .era-desc { font-size: 1.05rem; color: var(--muted); line-height: 1.75; max-width: 480px; margin: 0 auto 3.2rem; }
+    .door { position: relative; width: min(340px, 82vw); height: 420px; margin: 0 auto 2.5rem; }
+    .door-frame { position: absolute; inset: 0; border: 1px solid rgba(201,166,107,0.18); background: linear-gradient(180deg, rgba(20,18,16,0.9) 0%, rgba(12,11,10,0.95) 100%); box-shadow: 0 0 0 1px rgba(0,0,0,0.5), inset 0 0 60px rgba(0,0,0,0.6), 0 25px 50px rgba(0,0,0,0.45); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 1.1s cubic-bezier(0.16, 1, 0.3, 1); overflow: hidden; }
+    .door-frame::before { content: ''; position: absolute; inset: 12px; border: 1px solid rgba(201,166,107,0.08); pointer-events: none; }
+    .door.unlocked .door-frame { transform: scale(0.92) translateY(-8px); opacity: 0.35; filter: blur(2px); }
+    .door-seal { width: 64px; height: 64px; border: 1px solid rgba(201,166,107,0.35); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 1.4rem; position: relative; transition: all 0.8s ease; }
+    .door-seal::before { content: ''; position: absolute; inset: 6px; border: 1px solid rgba(201,166,107,0.15); border-radius: 50%; }
+    .door-seal svg { width: 22px; height: 22px; stroke: var(--gold); fill: none; stroke-width: 1.2; opacity: 0.8; }
+    .door.unlocked .door-seal { opacity: 0; transform: scale(0.6); }
+    .door-label { font-size: 0.72rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); transition: opacity 0.6s; }
+    .door.unlocked .door-label { opacity: 0; }
+    .reveal { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transform: translateY(24px); transition: all 1s cubic-bezier(0.16, 1, 0.3, 1) 0.25s; pointer-events: none; padding: 2rem; }
+    .door.unlocked .reveal { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .reveal-quote { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.35rem; line-height: 1.55; color: var(--text); max-width: 280px; margin-bottom: 1.2rem; }
+    .reveal-meta { font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); }
+    .unlock-btn { background: transparent; border: 1px solid rgba(201,166,107,0.45); color: var(--gold); font-family: 'Inter', sans-serif; font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; padding: 0.95rem 2rem; cursor: pointer; transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1); position: relative; overflow: hidden; }
+    .unlock-btn::before { content: ''; position: absolute; inset: 0; background: var(--gold); transform: scaleX(0); transform-origin: left; transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1); z-index: -1; }
+    .unlock-btn:hover { color: #0a0908; border-color: var(--gold); }
+    .unlock-btn:hover::before { transform: scaleX(1); }
+    .unlock-btn:disabled { opacity: 0.25; cursor: not-allowed; pointer-events: none; }
+    .door.unlocked + .unlock-btn, .era .unlock-btn.hidden { display: none; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(3,3,4,0.82); backdrop-filter: blur(12px); z-index: 300; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all 0.45s ease; padding: 1.5rem; }
+    .modal-overlay.open { opacity: 1; visibility: visible; }
+    .modal { background: #0c0b0a; border: 1px solid rgba(201,166,107,0.18); max-width: 440px; width: 100%; padding: 2.8rem 2.2rem; text-align: center; transform: translateY(20px) scale(0.97); transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 30px 80px rgba(0,0,0,0.55); }
+    .modal-overlay.open .modal { transform: translateY(0) scale(1); }
+    .modal-era { font-size: 0.65rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--gold); margin-bottom: 1.1rem; }
+    .modal h3 { font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: 1.65rem; margin-bottom: 1.8rem; line-height: 1.35; }
+    .options { display: flex; flex-direction: column; gap: 0.7rem; margin-bottom: 1.8rem; }
+    .option { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.9rem; font-weight: 300; padding: 0.95rem 1.2rem; cursor: pointer; transition: all 0.35s ease; text-align: left; }
+    .option:hover { border-color: rgba(201,166,107,0.4); background: rgba(201,166,107,0.06); }
+    .option.correct { border-color: rgba(100,180,120,0.5); background: rgba(100,180,120,0.1); }
+    .option.wrong { border-color: rgba(180,80,80,0.4); background: rgba(180,80,80,0.08); opacity: 0.6; }
+    .modal-feedback { font-size: 0.85rem; color: var(--muted); min-height: 1.4em; margin-bottom: 1rem; }
+    .modal-close { background: none; border: none; color: var(--muted); font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; margin-top: 0.5rem; }
+    .modal-close:hover { color: var(--text); }
+    .finale { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 6rem 1.5rem; position: relative; }
+    .finale::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 40% at 50% 50%, rgba(201,166,107,0.05) 0%, transparent 70%); pointer-events: none; }
+    .finale h2 { font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: clamp(2.4rem, 6vw, 3.8rem); margin-bottom: 1.2rem; }
+    .finale p { color: var(--muted); max-width: 400px; line-height: 1.7; margin-bottom: 2.5rem; }
+    .finale-note { font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); opacity: 0.7; }
+    .era.locked .door-frame { opacity: 0.45; }
+    .era.locked .unlock-btn { opacity: 0.3; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <canvas id="atmosphere"></canvas>
+  <div class="progress"><div class="progress-fill" id="progressFill"></div></div>
+  <nav class="era-nav" id="eraNav">
+    <button class="era-dot active" data-era="0"><span>Entrance</span></button>
+    <button class="era-dot" data-era="1"><span>Egypt</span></button>
+    <button class="era-dot" data-era="2"><span>Renaissance</span></button>
+    <button class="era-dot" data-era="3"><span>Industrial</span></button>
+    <button class="era-dot" data-era="4"><span>Horizon</span></button>
+  </nav>
+  <div class="tunnel">
+    <section class="entrance" id="entrance">
+      <div class="entrance-label">A Journey Through Sealed Time</div>
+      <h1>Time Capsule<br>Tunnel</h1>
+      <p>Four chambers. Four eras. Each sealed door holds a fragment of what we were — and what we might become.</p>
+      <div class="scroll-hint"><span>Scroll to enter</span><div class="line"></div></div>
+    </section>
+    <section class="era era-egypt" id="era-1" data-era="1">
+      <div class="era-content">
+        <div class="era-number">Chamber 01</div>
+        <h2 class="era-title">The First Light</h2>
+        <p class="era-desc">Along the Nile, stone was cut to outlast memory. Here the earliest systems of order, belief, and eternity were written into the desert.</p>
+        <div class="door" id="door-1">
+          <div class="door-frame">
+            <div class="door-seal"><svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.5 3.5 9.5 8 11 4.5-1.5 8-5.5 8-11V6l-8-4z"/></svg></div>
+            <div class="door-label">Sealed</div>
+            <div class="reveal"><div class="reveal-quote">“What is written in stone remembers longer than kings.”</div><div class="reveal-meta">c. 2500 BCE</div></div>
+          </div>
+        </div>
+        <button class="unlock-btn" data-door="1">Open the Chamber</button>
+      </div>
+    </section>
+    <section class="era era-renaissance locked" id="era-2" data-era="2">
+      <div class="era-content">
+        <div class="era-number">Chamber 02</div>
+        <h2 class="era-title">The Reawakening</h2>
+        <p class="era-desc">Perspective returned to the canvas. Human reason and beauty were placed at the center of the universe once more.</p>
+        <div class="door" id="door-2">
+          <div class="door-frame">
+            <div class="door-seal"><svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.5 3.5 9.5 8 11 4.5-1.5 8-5.5 8-11V6l-8-4z"/></svg></div>
+            <div class="door-label">Sealed</div>
+            <div class="reveal"><div class="reveal-quote">“Man is the measure of all things — and also their question.”</div><div class="reveal-meta">Florence, 15th Century</div></div>
+          </div>
+        </div>
+        <button class="unlock-btn" data-door="2" disabled>Locked</button>
+      </div>
+    </section>
+    <section class="era era-industrial locked" id="era-3" data-era="3">
+      <div class="era-content">
+        <div class="era-number">Chamber 03</div>
+        <h2 class="era-title">The Machine Age</h2>
+        <p class="era-desc">Steam, steel, and electricity bent the world. Time itself was measured by the rhythm of engines and the glow of cities at night.</p>
+        <div class="door" id="door-3">
+          <div class="door-frame">
+            <div class="door-seal"><svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.5 3.5 9.5 8 11 4.5-1.5 8-5.5 8-11V6l-8-4z"/></svg></div>
+            <div class="door-label">Sealed</div>
+            <div class="reveal"><div class="reveal-quote">“We taught the night to burn and called it progress.”</div><div class="reveal-meta">Manchester & beyond</div></div>
+          </div>
+        </div>
+        <button class="unlock-btn" data-door="3" disabled>Locked</button>
+      </div>
+    </section>
+    <section class="era era-horizon locked" id="era-4" data-era="4">
+      <div class="era-content">
+        <div class="era-number">Chamber 04</div>
+        <h2 class="era-title">The Horizon</h2>
+        <p class="era-desc">Signals travel at the speed of light. Knowledge is no longer bound to place. The next chamber is still being written.</p>
+        <div class="door" id="door-4">
+          <div class="door-frame">
+            <div class="door-seal"><svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.5 3.5 9.5 8 11 4.5-1.5 8-5.5 8-11V6l-8-4z"/></svg></div>
+            <div class="door-label">Sealed</div>
+            <div class="reveal"><div class="reveal-quote">“The future is not a place we go. It is a place we build.”</div><div class="reveal-meta">Present →</div></div>
+          </div>
+        </div>
+        <button class="unlock-btn" data-door="4" disabled>Locked</button>
+      </div>
+    </section>
+    <section class="finale" id="finale">
+      <h2>The tunnel remains open.</h2>
+      <p>You have walked through four sealed ages. What you carry forward is yours alone.</p>
+      <div class="finale-note">End of transmission</div>
+    </section>
+  </div>
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <div class="modal-era" id="modalEra">Chamber</div>
+      <h3 id="modalQuestion">Question</h3>
+      <div class="options" id="modalOptions"></div>
+      <div class="modal-feedback" id="modalFeedback"></div>
+      <button class="modal-close" id="modalClose">Close</button>
+    </div>
+  </div>
+  <script>
+    const canvas = document.getElementById('atmosphere');
+    const ctx = canvas.getContext('2d');
+    let w, h, particles = [];
+    function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize); resize();
+    class Particle {
+      constructor() { this.reset(true); }
+      reset(init = false) {
+        this.x = Math.random() * w; this.y = init ? Math.random() * h : h + 10;
+        this.size = Math.random() * 1.4 + 0.3; this.speedY = Math.random() * 0.25 + 0.05;
+        this.speedX = (Math.random() - 0.5) * 0.15; this.opacity = Math.random() * 0.35 + 0.05;
+        this.life = 0; this.maxLife = 400 + Math.random() * 600;
+      }
+      update() { this.y -= this.speedY; this.x += this.speedX; this.life++; if (this.life > this.maxLife || this.y < -10) this.reset(); }
+      draw() {
+        const fade = 1 - (this.life / this.maxLife);
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(201, 166, 107, ${this.opacity * fade})`; ctx.fill();
+      }
+    }
+    for (let i = 0; i < 70; i++) particles.push(new Particle());
+    function animateParticles() {
+      ctx.clearRect(0, 0, w, h);
+      const grd = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w,h)*0.7);
+      grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(1, 'rgba(0,0,0,0.35)');
+      ctx.fillStyle = grd; ctx.fillRect(0, 0, w, h);
+      particles.forEach(p => { p.update(); p.draw(); });
+      requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+    const lenis = new Lenis({ duration: 1.35, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), smoothWheel: true });
+    function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+    requestAnimationFrame(raf);
+    gsap.registerPlugin(ScrollTrigger);
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add((time) => { lenis.raf(time * 1000); });
+    gsap.ticker.lagSmoothing(0);
+    gsap.timeline()
+      .to('.entrance-label', { opacity: 1, y: 0, duration: 1.2, ease: 'power3.out' }, 0.3)
+      .to('.entrance h1', { opacity: 1, y: 0, duration: 1.4, ease: 'power3.out' }, 0.5)
+      .to('.entrance p', { opacity: 1, y: 0, duration: 1.2, ease: 'power3.out' }, 0.8)
+      .to('.scroll-hint', { opacity: 1, duration: 1, ease: 'power2.out' }, 1.3);
+    const progressFill = document.getElementById('progressFill');
+    ScrollTrigger.create({ trigger: '.tunnel', start: 'top top', end: 'bottom bottom', onUpdate: (self) => { progressFill.style.width = (self.progress * 100) + '%'; } });
+    const eras = document.querySelectorAll('.era');
+    const dots = document.querySelectorAll('.era-dot');
+    eras.forEach((era, i) => {
+      ScrollTrigger.create({ trigger: era, start: 'top 55%', end: 'bottom 45%', onEnter: () => setActive(i + 1), onEnterBack: () => setActive(i + 1) });
+    });
+    ScrollTrigger.create({ trigger: '#entrance', start: 'top top', end: 'bottom 60%', onEnter: () => setActive(0), onEnterBack: () => setActive(0) });
+    function setActive(index) {
+      dots.forEach((d, i) => d.classList.toggle('active', i === index));
+      eras.forEach((e, i) => e.classList.toggle('active', i === index - 1));
+    }
+    dots.forEach(dot => {
+      dot.addEventListener('click', () => {
+        const idx = +dot.dataset.era;
+        const target = idx === 0 ? document.getElementById('entrance') : document.getElementById('era-' + idx);
+        if (target) lenis.scrollTo(target, { offset: 0, duration: 1.6 });
+      });
+    });
+    const questions = {
+      1: { era: 'Chamber 01 — Egypt', q: 'Which river made the earliest large-scale civilization possible?', options: ['The Tigris', 'The Nile', 'The Indus', 'The Yellow River'], correct: 1 },
+      2: { era: 'Chamber 02 — Renaissance', q: 'Which idea returned most powerfully during the Renaissance?', options: ['Divine right of kings', 'Human perspective & reason', 'Absolute monarchy', 'Nomadic life'], correct: 1 },
+      3: { era: 'Chamber 03 — Industrial', q: 'What force most transformed cities and timekeeping in the 19th century?', options: ['Steam & electricity', 'Printing press alone', 'Horse transport', 'Wind power'], correct: 0 },
+      4: { era: 'Chamber 04 — Horizon', q: 'What travels near the speed of light and reshaped knowledge itself?', options: ['Steam ships', 'Information & signals', 'Railways', 'Printing'], correct: 1 }
+    };
+    let currentDoor = null;
+    document.querySelectorAll('.unlock-btn').forEach(btn => {
+      btn.addEventListener('click', () => { const id = +btn.dataset.door; if (btn.disabled) return; openModal(id); });
+    });
+    function openModal(id) {
+      currentDoor = id; const data = questions[id];
+      document.getElementById('modalEra').textContent = data.era;
+      document.getElementById('modalQuestion').textContent = data.q;
+      document.getElementById('modalFeedback').textContent = '';
+      const opts = document.getElementById('modalOptions'); opts.innerHTML = '';
+      data.options.forEach((opt, i) => {
+        const b = document.createElement('button'); b.className = 'option'; b.textContent = opt;
+        b.addEventListener('click', () => checkAnswer(i, data.correct, b)); opts.appendChild(b);
+      });
+      document.getElementById('modal').classList.add('open');
+    }
+    function checkAnswer(selected, correct, btn) {
+      const all = document.querySelectorAll('.option');
+      all.forEach(o => o.style.pointerEvents = 'none');
+      if (selected === correct) {
+        btn.classList.add('correct');
+        document.getElementById('modalFeedback').textContent = 'The seal yields…';
+        document.getElementById('modalFeedback').style.color = '#8fbc8f';
+        setTimeout(() => { closeModal(); unlockDoor(currentDoor); }, 900);
+      } else {
+        btn.classList.add('wrong');
+        document.getElementById('modalFeedback').textContent = 'The seal holds. Try again.';
+        document.getElementById('modalFeedback').style.color = '#c08080';
+        setTimeout(() => { all.forEach(o => { o.classList.remove('wrong'); o.style.pointerEvents = 'auto'; }); document.getElementById('modalFeedback').textContent = ''; }, 1200);
+      }
+    }
+    function unlockDoor(id) {
+      const door = document.getElementById('door-' + id); door.classList.add('unlocked');
+      const btn = document.querySelector(`.unlock-btn[data-door="${id}"]`); if (btn) btn.classList.add('hidden');
+      const next = id + 1;
+      if (next <= 4) {
+        const nextEra = document.getElementById('era-' + next); nextEra.classList.remove('locked');
+        const nextBtn = document.querySelector(`.unlock-btn[data-door="${next}"]`);
+        if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = 'Open the Chamber'; }
+        dots[next].classList.add('unlocked');
+      }
+      dots[id].classList.add('unlocked');
+    }
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.getElementById('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
+    function closeModal() { document.getElementById('modal').classList.remove('open'); }
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+  </script>
+</body>
+</html>
